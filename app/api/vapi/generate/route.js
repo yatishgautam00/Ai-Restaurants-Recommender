@@ -12,7 +12,7 @@ export async function GET() {
       headers: { "Content-Type": "application/json" },
     }
   );
-}
+}   
 
 // POST route to handle recommendations
 export async function POST(req) {

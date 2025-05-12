@@ -6,7 +6,7 @@ function page() {
     <>
      
       <h3>ASK AI</h3>
-      <Agent userName="You" userId='' type='generate'/>
+      <Agent  />
     </>
   );
 }

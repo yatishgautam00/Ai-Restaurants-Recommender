@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
+import { getCurrentUserData } from "@/Firebase/FirebaseAPI";
 import { cn } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
 import { assistant } from "@/constants";
@@ -15,13 +15,13 @@ const CallStatus = {
   FINISHED: "FINISHED",
 };
 
-const Agent = ({ userName }) => {
-  const router = useRouter();
+function Agent() {
+   const router = useRouter();
   const [callStatus, setCallStatus] = useState(CallStatus.INACTIVE);
   const [messages, setMessages] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastMessage, setLastMessage] = useState("");
-
+  const [user, setUser] = useState("");
   useEffect(() => {
     const onCallStart = () => {
       setCallStatus(CallStatus.ACTIVE);
@@ -74,13 +74,26 @@ const Agent = ({ userName }) => {
       setLastMessage(messages[messages.length - 1].content);
     }
   }, [messages]);
+    
+  useEffect(() => {
+    const fetchUser = async () => {
+      const response = await getCurrentUserData();
+      if (response.success) {
+        setUser(response.data); // { uid, email, name, etc. }
+        
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
+    const { uid, email } = user;
 
     await vapi.start(assistant, {
       variableValues: {
-        username: userName,
+        userid: user.uid,
+        useremail: user.email,
       },
     });
   };
@@ -118,7 +131,7 @@ const Agent = ({ userName }) => {
               height={539}
               className="rounded-full object-cover size-[120px]"
             />
-            <h3>{userName}</h3>
+            <h3>{user.email}</h3>
           </div>
         </div>
       </div>
@@ -163,6 +176,8 @@ const Agent = ({ userName }) => {
       </div>
     </>
   );
-};
+}
 
-export default Agent;
+export default Agent
+
+
