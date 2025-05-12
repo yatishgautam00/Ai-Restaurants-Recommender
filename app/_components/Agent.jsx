@@ -16,7 +16,7 @@ const CallStatus = {
 };
 
 function Agent() {
-   const router = useRouter();
+  const router = useRouter();
   const [callStatus, setCallStatus] = useState(CallStatus.INACTIVE);
   const [messages, setMessages] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -74,13 +74,12 @@ function Agent() {
       setLastMessage(messages[messages.length - 1].content);
     }
   }, [messages]);
-    
+
   useEffect(() => {
     const fetchUser = async () => {
       const response = await getCurrentUserData();
       if (response.success) {
         setUser(response.data); // { uid, email, name, etc. }
-        
       }
     };
     fetchUser();
@@ -90,7 +89,7 @@ function Agent() {
     setCallStatus(CallStatus.CONNECTING);
     const { uid, email } = user;
 
-    await vapi.start(assistant, {
+    await vapi.start("ai-recommender-agent", {
       variableValues: {
         userid: user.uid,
         useremail: user.email,
@@ -178,6 +177,4 @@ function Agent() {
   );
 }
 
-export default Agent
-
-
+export default Agent;
