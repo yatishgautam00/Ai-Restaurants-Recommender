@@ -11,7 +11,18 @@ import { useRef } from "react"; // Already should be imported
 import { getUserRecommendations } from "@/Firebase/FirebaseAPI";
 
 import { db } from "@/Firebase/Firebase"; // Ensure your firebase config exports 'db'
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  Timestamp,
+  updateDoc,
+  getDocs,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
+import { Button } from "@/components/ui/button";
 
 const CallStatus = {
   INACTIVE: "INACTIVE",
@@ -44,7 +55,7 @@ function Agent() {
       setCallStatus(CallStatus.ACTIVE);
     };
 
-    const onCallEnd = () => {
+    const onCallEnd = async () => {
       setCallStatus(CallStatus.FINISHED);
     };
 
@@ -91,6 +102,78 @@ function Agent() {
       setLastMessage(messages[messages.length - 1].content);
     }
   }, [messages]);
+  const deleteExpiredRecommendations = async () => {
+    let currentUser = user;
+
+    // ⏳ Try to fetch current user if not in state
+    if (!currentUser?.uid) {
+      console.warn("User UID not available in state. Trying to refetch...");
+      const response = await getCurrentUserData(); // Assuming this function exists
+
+      if (response.success) {
+        currentUser = response.data;
+        setUser(response.data); // Optionally persist user data
+      } else {
+        console.error("Failed to get current user. Skipping deletion.");
+        return;
+      }
+    }
+
+    if (!currentUser?.uid) {
+      console.warn("User UID still undefined. Skipping Firestore deletion.");
+      return;
+    }
+
+    try {
+      // Query to get active recommendations for the current user
+      const q = query(
+        collection(db, "recommendations"),
+        where("status", "==", "active"),
+        where("userId", "==", currentUser.uid)
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        console.log("No active recommendations found.");
+        return;
+      }
+
+      const now = Date.now();
+
+      // Iterate over the documents and delete those that are older than 5 minutes
+      const deletePromises = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        const createdAt = data.createdAt?.toDate?.(); // Convert Firestore Timestamp to JS Date
+
+        if (createdAt) {
+          const ageInMs = now - createdAt.getTime(); // Calculate age in milliseconds
+          if (ageInMs > 5 * 60 * 1000) {
+            // If older than 5 minutes
+            console.log(`Deleting expired recommendation: ${docSnap.id}`);
+            return deleteDoc(doc(db, "recommendations", docSnap.id)); // Delete the document
+          }
+        }
+
+        return Promise.resolve(); // Skip deletion if not expired
+      });
+
+      // Wait for all deletions to finish
+      await Promise.all(deletePromises);
+      console.log("✅ Expired recommendations deleted.");
+    } catch (error) {
+      console.error("❌ Error deleting recommendation documents:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Set up a timer to run the deletion function every minute
+    const timer = setTimeout(() => {
+      deleteExpiredRecommendations();
+    }, 2 * 60 * 1000); // 1 minute
+
+    return () => clearTimeout(timer); // Cleanup the timeout on component unmount
+  }, []);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -103,34 +186,33 @@ function Agent() {
   }, []);
 
   useEffect(() => {
-  if (!user?.uid) return; // Wait for user to be loaded
+    if (!user?.uid) return; // Wait for user to be loaded
 
-  const q = query(
-    collection(db, "recommendations"),
-    where("status", "==", "active"),
-    where("userId", "==", user.uid)
-  );
+    const q = query(
+      collection(db, "recommendations"),
+      where("status", "==", "active"),
+      where("userId", "==", user.uid)
+    );
 
-  const unsubscribe = onSnapshot(
-    q,
-    (snapshot) => {
-      if (!snapshot.empty) {
-        const docs = snapshot.docs.map((doc) => doc.data());
-        setRecommendations(docs);
-      } else {
-        setRecommendations([]);
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const docs = snapshot.docs.map((doc) => doc.data());
+          setRecommendations(docs);
+        } else {
+          setRecommendations([]);
+        }
+        setLoadingRecommendation(false);
+      },
+      (error) => {
+        console.error("Error fetching active recommendations:", error);
+        setLoadingRecommendation(false);
       }
-      setLoadingRecommendation(false);
-    },
-    (error) => {
-      console.error("Error fetching active recommendations:", error);
-      setLoadingRecommendation(false);
-    }
-  );
+    );
 
-  return () => unsubscribe();
-}, [user]); // Depend on 'user' so it refetches after user loads
-
+    return () => unsubscribe();
+  }, [user]); // Depend on 'user' so it refetches after user loads
 
   useEffect(() => {
     console.log("Fetched recommendations:", recommendations);
@@ -155,114 +237,165 @@ function Agent() {
   };
 
   return (
-    <>
-      <div className="call-view">
-        {/* AI Recommender Card */}
-        <div className="card-interviewer">
+    <div className="grid grid-cols-4 gap-4 justify-center items-start h-full">
+      {/* AI Recommender Card */}
+      <div className="flex flex-col gap-4 col-span-1 justify-start items-center">
+        <div className="flex flex-row justify-center items-center gap-1">
           <div className="avatar">
             <Image
               src="/ai-image.jpg"
               alt="profile-image"
-              width={65}
-              height={54}
-              className="object-cover"
+              width={50}
+              height={50}
+              className="object-cover rounded-full"
             />
             {isSpeaking && <span className="animate-speak" />}
           </div>
-          <h3>AI Recommender</h3>
+          <div className="flex flex-col gap-1 p-1">
+            <h3>AI Recommender</h3>
+            <h4>AI Venus</h4>
+          </div>
         </div>
 
+        {/* Call button */}
+        <div className="flex justify-center mt-4">
+          {callStatus !== "ACTIVE" ? (
+            <Button className="relative btn-call" onClick={() => handleCall()}>
+              <span
+                className={cn(
+                  "absolute animate-ping rounded-full opacity-75",
+                  callStatus !== "CONNECTING" && "hidden"
+                )}
+              />
+              <span className="relative">
+                {callStatus === "INACTIVE" || callStatus === "FINISHED"
+                  ? "Start Convo.."
+                  : ". . ."}
+              </span>
+            </Button>
+          ) : (
+            <Button
+              className="btn-disconnect"
+              onClick={() => handleDisconnect()}
+            >
+              End
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Chat Section */}
+      <div className="col-span-3 flex flex-col justify-between h-full">
         {/* User Profile Card */}
-        <div className="card-border">
-          <div className="card-content">
-            <Image
-              src="/user.png"
-              alt="profile-image"
-              width={539}
-              height={539}
-              className="rounded-full object-cover size-[120px]"
-            />
+        <div className="card-content flex justify-end items-center flex-row mb-4">
+          <Image
+            src="/user.png"
+            alt="profile-image"
+            width={60}
+            height={60}
+            className="rounded-full object-cover"
+          />
+          <div className="flex flex-col justify-center  p-1">
+            <h3>User Email</h3>
             <h3>{user.email}</h3>
           </div>
         </div>
-      </div>
 
-      <div className="chat-container max-h-[60vh] overflow-y-auto p-4 space-y-3">
-        {messages.length > 0 &&
-          messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`flex flex-col items-start ${
-                msg.role === "user" ? "items-end" : "items-start"
-              }`}
-            >
-              <div
-                className={`max-w-xs px-4 py-2 rounded-lg text-white ${
-                  msg.role === "user" ? "bg-blue-600" : "bg-gray-700"
-                }`}
-              >
-                <p>{msg.content}</p>
-              </div>
-
-              {/* Show recommendations if available */}
-              {loadingRecommendation ? (
+        {/* Chat and Recommendations */}
+        <div className="flex flex-col bg-gray-200 rounded-2xl border-2 outline-2 h-[75vh]">
+          {/* Chat messages container with scroll */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="chat-container flex flex-col space-y-3 p-4">
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`flex flex-col ${
+                    msg.role === "user" ? "items-end" : "items-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-xs px-4 py-2 rounded-lg text-white ${
+                      msg.role === "user" ? "bg-blue-600" : "bg-gray-700"
+                    }`}
+                  >
+                    <p>{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+              {loadingRecommendation && (
                 <p className="text-sm text-gray-400 mt-2">
                   Loading recommendations...
                 </p>
-              ) : recommendations.length > 0 ? (
-                <div className="flex flex-col gap-2 mt-2 w-full">
-                  <p className="text-sm text-gray-400 ml-2 mb-1">
-                    Recommended restaurants:
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    {recommendations.map((rec, i) => (
-                      <div
-                        key={i}
-                        className="bg-gray-900 text-white text-xs px-4 py-3 rounded-md border border-gray-700 shadow-sm w-full max-w-xs"
-                      >
-                        <p className="font-semibold mb-1">🍽 {rec.name}</p>
-                        <p className="text-gray-300 mb-1">{rec.description}</p>
-                        <p className="text-gray-400 text-[11px]">
-                          Budget: {rec.budget}
-                        </p>
-                        <p className="text-gray-400 text-[11px]">
-                          Address: {rec.address}, {rec.location}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ))}
-
-        {/* Scroll anchor at bottom */}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="w-full flex justify-center">
-        {callStatus !== "ACTIVE" ? (
-          <button className="relative btn-call" onClick={() => handleCall()}>
-            <span
-              className={cn(
-                "absolute animate-ping rounded-full opacity-75",
-                callStatus !== "CONNECTING" && "hidden"
               )}
-            />
+              <div ref={messagesEndRef} />
+            {/* Recommendations fixed at bottom (scrolls if long) */}
+          {recommendations.length > 0 && !loadingRecommendation && (
+            <div className="recommendations-container overflow-y-auto p-4 bg-gray-400 border-t border-gray-800">
+              <p className="text-sm text-gray-400 mb-1">
+                Recommended restaurants:
+              </p>
+              <div className="flex flex-wrap gap-3 justify-between">
+                {recommendations.map((doc, docIndex) =>
+                  doc.suggestions?.map((rec, i) => (
+                    <div
+                      key={`${docIndex}-${i}`}
+                      className="bg-gray-300  text-sm  p-4 rounded-lg border border-gray-700 shadow-md w-full max-w-xs"
+                    >
+                      {/* Restaurant Name */}
+                      <p className="text-lg font-semibold mb-2">
+                        Name: {rec.name}
+                      </p>
 
-            <span className="relative">
-              {callStatus === "INACTIVE" || callStatus === "FINISHED"
-                ? "Call"
-                : ". . ."}
-            </span>
-          </button>
-        ) : (
-          <button className="btn-disconnect" onClick={() => handleDisconnect()}>
-            End
-          </button>
-        )}
+                      {/* <hr className="border-gray-600 mb-2" /> */}
+
+                      {/* Description */}
+                      {/* <p className="text-gray-300 mb-2">{rec.description}</p> */}
+
+                      <hr className="border-gray-600 mb-2" />
+
+                      {/* Budget */}
+                      <p className=" text-lg mb-1">
+                        <span className="font-medium">Budget:</span>{" "}
+                        {rec.budget}
+                      </p>
+                      <hr className="border-gray-600 mb-2" />
+
+                      {/* Address */}
+                      <p className=" text-lg mb-1">
+                        <span className="font-medium">Address:</span>{" "}
+                        {rec.address}
+                      </p>
+                      <hr className="border-gray-600 mb-2" />
+
+                      {/* Location */}
+                      <p className=" text-lg mb-3">
+                        {/* <span className="font-medium">Location:</span> {rec.location} */}
+                      </p>
+
+                      {/* Google Maps link box */}
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          `${rec.address}, ${rec.location}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-auto text-center bg-blue-700 hover:bg-blue-800 transition-colors text-white text-xs py-2 px-3 rounded-md"
+                      >
+                        View on Google Maps 🗺️
+                      </a>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+            </div>
+          </div>
+
+          
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
