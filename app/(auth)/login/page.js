@@ -23,7 +23,7 @@ export default function Login() {
     setLoading(false);
     if (res.success) {
       setMessage("Logged in successfully!");
-      router.push("/"); // Redirect to home page
+      router.push("/ask-ai"); // Redirect to home page
     } else {
       setMessage(`Error: ${res.error}`);
     }

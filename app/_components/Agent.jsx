@@ -269,7 +269,7 @@ function Agent() {
               />
               <span className="relative">
                 {callStatus === "INACTIVE" || callStatus === "FINISHED"
-                  ? "Start Convo.."
+                  ? "Start Conversation"
                   : ". . ."}
               </span>
             </Button>
@@ -278,7 +278,7 @@ function Agent() {
               className="btn-disconnect"
               onClick={() => handleDisconnect()}
             >
-              End
+              End Conversation
             </Button>
           )}
         </div>

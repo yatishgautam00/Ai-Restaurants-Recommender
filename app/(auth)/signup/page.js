@@ -23,7 +23,7 @@ export default function SignUp() {
     setLoading(false);
     if (res.success) {
       setMessage("Registered successfully!");
-      router.push("/"); // Redirect to home page
+      router.push("/ask-ai"); // Redirect to home page
     } else {
       setMessage(`Error: ${res.error}`);
     }
