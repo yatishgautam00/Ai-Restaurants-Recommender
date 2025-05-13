@@ -1,4 +1,4 @@
-![architecture](https://github.com/user-attachments/assets/5d4e7d15-bd32-4e85-9efe-b2ca0825df74)# 🍽️ AI Restaurant Recommender – Voice-Powered by Vapi AI
+# 🍽️ AI Restaurant Recommender – Voice-Powered by Vapi AI
 
 ## 📋 Table of Contents
 - 🤖 [Introduction](#-introduction)
