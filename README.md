@@ -32,7 +32,8 @@ The app is built with modern technologies like **Next.js**, **Firebase**, **Tail
 
 ## 🎥 Demo Video
 
-🎬 **[Watch Full Demo (3 min) on YouTube](https://youtu.be/YOUR_VIDEO_ID)**  
+🎬 **[Watch Full Demo (3 min) on YouTube](https://youtu.be/o9mA0RQRlnM)**  
+https://youtu.be/o9mA0RQRlnM
 Includes:
 - 3 test cases (including one in Hindi)
 - Explanation of architecture and prompt design
