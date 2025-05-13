@@ -24,7 +24,6 @@ The goal is to provide a modern, intuitive experience for foodies who prefer voi
 - 🗣 **Vapi AI** – Voice-based interaction  
 - 🤖 **Google Gemini** – Natural language understanding  
 - 🧩 **shadcn/ui** – Elegant UI components  
-- ✅ **Zod** – Schema validation
 
 ---
 
@@ -36,10 +35,8 @@ The goal is to provide a modern, intuitive experience for foodies who prefer voi
 - 🗣 **Multi-language Support**: Accepts location input in **English and Hindi**  
 - 🔐 **User Authentication**: Sign up / Sign in using Firebase  
 - 💻 **Modern UI**: Built with TailwindCSS + shadcn/ui for a clean interface  
-- 🗺️ **Recommendations Page**: View and explore suggestions  
 - 📌 **Google Maps Integration**: Open locations directly in Google Maps  
 - 🔑 **Role-based Navigation**: “Ask AI” appears only when user is logged in  
-- 📱 **Fully Responsive**: Works across all devices
 
 ---
 
@@ -77,16 +74,13 @@ npm install
 Create a `.env.local` file in the root of the project and add the following:
 
 ```env
+
 NEXT_PUBLIC_VAPI_WEB_TOKEN=
 NEXT_PUBLIC_VAPI_WORKFLOW_ID=
-
 GOOGLE_GENERATIVE_AI_API_KEY=
-
 NEXT_PUBLIC_BASE_URL=
 
 ```
-
-> Replace the values with your actual **Firebase**, **Vapi**, and **Gemini** credentials.
 
 ---
 
