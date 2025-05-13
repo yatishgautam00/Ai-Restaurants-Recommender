@@ -1,78 +1,82 @@
-🍽️ AI Restaurants Recommendation – Voice-Powered by Vapi AI
-📋 Table of Contents
+# 🍽️ AI Restaurants Recommendation – Voice-Powered by Vapi AI
 
-🤖 Introduction
+📋 **Table of Contents**  
+- 🤖 [Introduction](#-introduction)  
+- ⚙️ [Tech Stack](#-tech-stack)  
+- 🔋 [Features](#-features)  
+- 🚀 [Quick Start](#-quick-start)  
 
-⚙️ Tech Stack
+---
 
-🔋 Features
+## 🤖 Introduction
 
-🚀 Quick Start
-
-🤖 Introduction
-Built using Next.js, Firebase, and styled with Tailwind CSS, this AI-powered restaurant recommender app offers users personalized dining suggestions using voice interaction. Integrated with Vapi AI voice agents and Google Gemini, users can simply talk and get smart restaurant suggestions based on their budget, location, and preferred cuisine.
+Built using **Next.js**, **Firebase**, and styled with **Tailwind CSS**, this AI-powered restaurant recommender app offers users personalized dining suggestions using voice interaction. Integrated with **Vapi AI voice agents** and **Google Gemini**, users can simply talk and get smart restaurant suggestions based on their **budget**, **location**, and **preferred cuisine**.
 
 The goal is to provide a modern, intuitive experience for foodies who prefer voice-first AI-powered discovery.
 
-⚙️ Tech Stack
-Next.js – Frontend & backend logic
+---
 
-Firebase – Authentication & Firestore database
+## ⚙️ Tech Stack
 
-Tailwind CSS – Utility-first modern styling
+- ⚡ **Next.js** – Frontend & backend logic  
+- 🔐 **Firebase** – Authentication & Firestore database  
+- 🎨 **Tailwind CSS** – Utility-first modern styling  
+- 🗣 **Vapi AI** – Voice-based interaction  
+- 🤖 **Google Gemini** – Natural language understanding  
+- 🧩 **shadcn/ui** – Elegant UI components  
+- ✅ **Zod** – Schema validation
 
-Vapi AI – Voice-based interaction
+---
 
-Google Gemini – Natural language understanding and contextual processing
+## 🔋 Features
 
-shadcn/ui – Elegant UI components
+- 🧠 **Voice Assistant**: Ask for restaurant recommendations using voice — powered by Vapi AI  
+- ⚡ **Real-time Suggestions**: Instantly get personalized suggestions  
+- 📍 **Location & Budget Based**: Input location and budget to receive relevant options  
+- 🗣 **Multi-language Support**: Accepts location input in **English and Hindi**  
+- 🔐 **User Authentication**: Sign up / Sign in using Firebase  
+- 💻 **Modern UI**: Built with TailwindCSS + shadcn/ui for a clean interface  
+- 🗺️ **Recommendations Page**: View and explore suggestions  
+- 📌 **Google Maps Integration**: Open locations directly in Google Maps  
+- 🔑 **Role-based Navigation**: “Ask AI” appears only when user is logged in  
+- 📱 **Fully Responsive**: Works across all devices
 
-Zod – Schema validation
+---
 
-🔋 Features
-👉 Voice Assistant: Ask for restaurant recommendations using voice — powered by Vapi AI.
-👉 Real-time Suggestions: Instantly get personalized restaurant suggestions.
-👉 Location & Budget Based: Input location and budget to receive relevant options.
-👉 Multi-language Support: Accepts input in English and Hindi (for locations).
-👉 User Authentication: Sign up / Sign in using Firebase email/password auth.
-👉 Modern UI: Built with shadcn/ui and TailwindCSS for a clean and responsive interface.
-👉 Recommendations Page: View dynamically fetched suggestions from Firestore.
-👉 Google Maps Integration: Open location directly on Google Maps.
-👉 Role-based Navigation: “Ask AI” available only when user is logged in.
-👉 Responsive: Works seamlessly on mobile, tablet, and desktop.
+## 🚀 Quick Start
 
-🚀 Quick Start
-Follow these steps to set up the project locally on your machine.
+### ✅ Prerequisites
 
-✅ Prerequisites
-Make sure the following are installed:
+Ensure you have:
 
-Git
+- Git  
+- Node.js  
+- npm  
 
-Node.js
+---
 
-npm (Node Package Manager)
+### 🔽 Cloning the Repository
 
-🔽 Cloning the Repository
-bash
-Copy
-Edit
+```bash
 git clone https://github.com/your-username/ai-restaurant-recommender.git
 cd ai-restaurant-recommender
-📦 Installation
-Install dependencies:
+```
 
-bash
-Copy
-Edit
+---
+
+### 📦 Install Dependencies
+
+```bash
 npm install
-⚙️ Set Up Environment Variables
-Create a file named .env.local in the root directory and add the following:
+```
 
-env
-Copy
-Edit
+---
 
+### ⚙️ Set Up Environment Variables
+
+Create a `.env.local` file in the root of the project and add the following:
+
+```env
 NEXT_PUBLIC_VAPI_WEB_TOKEN=
 NEXT_PUBLIC_VAPI_WORKFLOW_ID=
 
@@ -80,13 +84,22 @@ GOOGLE_GENERATIVE_AI_API_KEY=
 
 NEXT_PUBLIC_BASE_URL=
 
+```
 
+> Replace the values with your actual **Firebase**, **Vapi**, and **Gemini** credentials.
 
-Replace these values with your actual Firebase, Vapi, and Google Gemini credentials.
+---
 
-▶️ Running the App
-bash
-Copy
-Edit
+### ▶️ Start the Dev Server
+
+```bash
 npm run dev
-Now open http://localhost:3000 in your browser to explore your AI-powered restaurant recommender!
+```
+
+Then, open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🙌 Contribution
+
+Feel free to fork, enhance, or raise issues. Let's build smarter AI assistants together 🚀
