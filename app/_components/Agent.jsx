@@ -7,6 +7,11 @@ import { getCurrentUserData } from "@/Firebase/FirebaseAPI";
 import { cn } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
 import { assistant } from "@/constants";
+import { useRef } from "react"; // Already should be imported
+import { getUserRecommendations } from "@/Firebase/FirebaseAPI";
+
+import { db } from "@/Firebase/Firebase"; // Ensure your firebase config exports 'db'
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 const CallStatus = {
   INACTIVE: "INACTIVE",
@@ -17,11 +22,23 @@ const CallStatus = {
 
 function Agent() {
   const router = useRouter();
+  const [loadingRecommendation, setLoadingRecommendation] = useState(true);
   const [callStatus, setCallStatus] = useState(CallStatus.INACTIVE);
   const [messages, setMessages] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastMessage, setLastMessage] = useState("");
   const [user, setUser] = useState("");
+  const messagesEndRef = useRef(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [triggerRecommendationFetch, setTriggerRecommendationFetch] =
+    useState(false);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
   useEffect(() => {
     const onCallStart = () => {
       setCallStatus(CallStatus.ACTIVE);
@@ -79,20 +96,55 @@ function Agent() {
     const fetchUser = async () => {
       const response = await getCurrentUserData();
       if (response.success) {
-        setUser(response.data); // { uid, email, name, etc. }
+        setUser(response.data);
       }
     };
     fetchUser();
   }, []);
 
+  useEffect(() => {
+  if (!user?.uid) return; // Wait for user to be loaded
+
+  const q = query(
+    collection(db, "recommendations"),
+    where("status", "==", "active"),
+    where("userId", "==", user.uid)
+  );
+
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      if (!snapshot.empty) {
+        const docs = snapshot.docs.map((doc) => doc.data());
+        setRecommendations(docs);
+      } else {
+        setRecommendations([]);
+      }
+      setLoadingRecommendation(false);
+    },
+    (error) => {
+      console.error("Error fetching active recommendations:", error);
+      setLoadingRecommendation(false);
+    }
+  );
+
+  return () => unsubscribe();
+}, [user]); // Depend on 'user' so it refetches after user loads
+
+
+  useEffect(() => {
+    console.log("Fetched recommendations:", recommendations);
+  }, [recommendations]);
+
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
     const { uid, email } = user;
 
-    await vapi.start("ai-recommender-agent", {
+    await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID, {
       variableValues: {
         userid: user.uid,
         useremail: user.email,
+        status: "active",
       },
     });
   };
@@ -135,21 +187,58 @@ function Agent() {
         </div>
       </div>
 
-      {messages.length > 0 && (
-        <div className="transcript-border">
-          <div className="transcript">
-            <p
-              key={lastMessage}
-              className={cn(
-                "transition-opacity duration-500 opacity-0",
-                "animate-fadeIn opacity-100"
-              )}
+      <div className="chat-container max-h-[60vh] overflow-y-auto p-4 space-y-3">
+        {messages.length > 0 &&
+          messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex flex-col items-start ${
+                msg.role === "user" ? "items-end" : "items-start"
+              }`}
             >
-              {lastMessage}
-            </p>
-          </div>
-        </div>
-      )}
+              <div
+                className={`max-w-xs px-4 py-2 rounded-lg text-white ${
+                  msg.role === "user" ? "bg-blue-600" : "bg-gray-700"
+                }`}
+              >
+                <p>{msg.content}</p>
+              </div>
+
+              {/* Show recommendations if available */}
+              {loadingRecommendation ? (
+                <p className="text-sm text-gray-400 mt-2">
+                  Loading recommendations...
+                </p>
+              ) : recommendations.length > 0 ? (
+                <div className="flex flex-col gap-2 mt-2 w-full">
+                  <p className="text-sm text-gray-400 ml-2 mb-1">
+                    Recommended restaurants:
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {recommendations.map((rec, i) => (
+                      <div
+                        key={i}
+                        className="bg-gray-900 text-white text-xs px-4 py-3 rounded-md border border-gray-700 shadow-sm w-full max-w-xs"
+                      >
+                        <p className="font-semibold mb-1">🍽 {rec.name}</p>
+                        <p className="text-gray-300 mb-1">{rec.description}</p>
+                        <p className="text-gray-400 text-[11px]">
+                          Budget: {rec.budget}
+                        </p>
+                        <p className="text-gray-400 text-[11px]">
+                          Address: {rec.address}, {rec.location}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ))}
+
+        {/* Scroll anchor at bottom */}
+        <div ref={messagesEndRef} />
+      </div>
 
       <div className="w-full flex justify-center">
         {callStatus !== "ACTIVE" ? (

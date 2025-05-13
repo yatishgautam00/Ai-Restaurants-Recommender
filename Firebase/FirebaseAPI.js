@@ -5,6 +5,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "./Firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs,orderBy, Timestamp } from "firebase/firestore";
 
 // Create New User and Store in Firestore
 export const registerUser = async (email, password) => {
@@ -59,6 +60,52 @@ export const getCurrentUserData = async () => {
         } else {
           resolve({ success: false, error: "User data not found in Firestore." });
         }
+      } catch (error) {
+        resolve({ success: false, error: error.message });
+      }
+    });
+  });
+};
+
+export const getUserRecommendations = async () => {
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      unsubscribe(); // Ensure it runs only once
+
+      if (!user) {
+        return resolve({ success: false, error: "No user is currently logged in." });
+      }
+
+      try {
+        // Create a query to fetch the document where userId matches and state is "active"
+        const q = query(
+          collection(db, "recommendations"),
+          where("userId", "==", user.uid), // Match the userId field
+          where("status", "==", "active") // Only fetch documents where the state is "active"
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          return resolve({ success: false, error: "No active recommendations found." });
+        }
+
+        // Assuming there's only one document with userId and state as active
+        const recommendationDoc = querySnapshot.docs[0]; // Get the first matching document
+
+        const data = recommendationDoc.data();
+        console.log("Data retrieved:", data); // Log the data to verify the state field
+
+        // Add the createdAt field properly
+        const recommendation = {
+          id: recommendationDoc.id,
+          ...data,
+          createdAt: data.createdAt instanceof Timestamp
+            ? data.createdAt.toDate() // Convert Firestore Timestamp to JS Date
+            : new Date(data.createdAt), // Handle if it's already a Date or ISO string
+        };
+
+        resolve({ success: true, data: recommendation });
       } catch (error) {
         resolve({ success: false, error: error.message });
       }

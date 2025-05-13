@@ -1,18 +1,21 @@
 import { db } from "@/Firebase/Firebase";
-import { collection, addDoc } from "firebase/firestore"; // ✅ Import required Firestore methods
+import { collection, addDoc, Timestamp } from "firebase/firestore"; // ✅ Import required Firestore methods
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 
 // GET route
 export async function GET() {
   return new Response(
-    JSON.stringify({ success: true, data: "Welcome to AI Restaurant Recommender!" }),
+    JSON.stringify({
+      success: true,
+      data: "Welcome to AI Restaurant Recommender!",
+    }),
     {
       status: 200,
       headers: { "Content-Type": "application/json" },
     }
   );
-}   
+}
 
 // POST route to handle recommendations
 export async function POST(req) {
@@ -25,7 +28,8 @@ export async function POST(req) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing one or more required fields: cuisine, budget, location, userid.",
+          error:
+            "Missing one or more required fields: cuisine, budget, location, userid.",
         }),
         {
           status: 400,
@@ -61,23 +65,20 @@ Format as a JSON array like:
 
     // Save to Firestore using modular SDK
     const recommendations = {
+      status: "active",
       cuisine,
       budget,
       location,
-      userId: userid,
+      userId: userid, // variable, but stored as field "userId"
       suggestions,
-      createdAt: new Date().toISOString(),
+      createdAt: Timestamp.now(), // proper Firestore timestamp
     };
-
     await addDoc(collection(db, "recommendations"), recommendations);
 
-    return new Response(
-      JSON.stringify({ success: true, data: suggestions }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, data: suggestions }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("🔥 Error generating or saving recommendations:", error);
     return new Response(

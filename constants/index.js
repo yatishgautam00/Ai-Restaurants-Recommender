@@ -1,6 +1,5 @@
 export const assistant = {
   name: "AI Restaurant Recommender",
-  firstMessage: "Hello! Let's find the perfect restaurant for you. May I ask a few quick questions about your preferences?",
   transcriber: {
     provider: "deepgram",
     model: "nova-2",
