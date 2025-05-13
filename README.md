@@ -1,5 +1,7 @@
 ## 🍽️ AI Restaurant Recommender – Voice-Powered by Vapi AI
 
+## live link: https://ai-restaurants-recommender.vercel.app/
+
 ## 📋 Table of Contents
 - 🤖 [Introduction](#-introduction)
 - ⚙️ [Tech Stack](#-tech-stack)
