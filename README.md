@@ -1,4 +1,4 @@
-# 🍽️ AI Restaurant Recommender – Voice-Powered by Vapi AI
+## 🍽️ AI Restaurant Recommender – Voice-Powered by Vapi AI
 
 ## 📋 Table of Contents
 - 🤖 [Introduction](#-introduction)
