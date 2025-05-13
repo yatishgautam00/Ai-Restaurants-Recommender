@@ -7,7 +7,6 @@
 - 🏗️ [Architecture](#-architecture)
 - 🚀 [Quick Start](#-quick-start)
 - 🔑 [Environment Variables](#-environment-variables)
-- 📦 [Repository Structure](#-repository-structure)
 - 🧠 [Prompt Design Rationale](#-prompt-design-rationale)
 - 📊 [Fine-Tuning Approach](#-fine-tuning-approach)
 - 🧨 [Failure Analysis](#-failure-analysis)
@@ -26,6 +25,16 @@
 - 💰 Budget  
 
 The app is built with modern technologies like **Next.js**, **Firebase**, **Tailwind CSS**, and **Vapi AI Voice Agents**. It uses **Google Gemini LLM** to parse and understand user input.
+
+---
+
+## 🎥 Demo Video
+
+🎬 **[Watch Full Demo (3 min) on YouTube](https://youtu.be/YOUR_VIDEO_ID)**  
+Includes:
+- 3 test cases (including one in Hindi)
+- Explanation of architecture and prompt design
+- Real-time voice-to-suggestion demo
 
 ---
 
@@ -121,29 +130,6 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 📦 Repository Structure
-
-```
-├── components/                # Reusable UI components
-├── lib/
-│   ├── firebase.ts           # Firebase setup
-│   ├── parser.ts             # Gemini result parsing
-│   └── firebaseAPI.ts        # Read/write Firestore
-├── pages/
-│   ├── api/recommend.ts      # API endpoint for LLM processing
-│   └── index.tsx             # Home page
-├── public/
-│   └── images/architecture.png
-├── dataset/
-│   └── prompts.json          # Fine-tuning dataset
-├── test/
-│   └── parsePrompt.test.ts   # Unit tests
-├── README.md
-└── .env.local.example
-```
-
----
-
 ## 🧠 Prompt Design Rationale
 
 ### Example Prompt:
@@ -230,19 +216,7 @@ test("should parse Hindi input correctly", () => {
   });
 });
 ```
-
 ---
-
-## 🎥 Demo Video
-
-🎬 **[Watch Full Demo (3 min) on YouTube](https://youtu.be/YOUR_VIDEO_ID)**  
-Includes:
-- 3 test cases (including one in Hindi)
-- Explanation of architecture and prompt design
-- Real-time voice-to-suggestion demo
-
----
-
 ## 🙌 Contribution
 
 Found a bug? Want to improve Gemini prompts or UI?  
