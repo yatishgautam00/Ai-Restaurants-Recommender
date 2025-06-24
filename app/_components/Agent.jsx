@@ -102,69 +102,93 @@ function Agent() {
       setLastMessage(messages[messages.length - 1].content);
     }
   }, [messages]);
-  const deleteExpiredRecommendations = async () => {
-    let currentUser = user;
+  useEffect(() => {
+  if (!user?.uid) return; // Wait until user is loaded
 
-    // ⏳ Try to fetch current user if not in state
-    if (!currentUser?.uid) {
-      console.warn("User UID not available in state. Trying to refetch...");
-      const response = await getCurrentUserData(); // Assuming this function exists
+  const q = query(
+    collection(db, "recommendations"),
+    where("status", "==", "active"),
+    where("userId", "==", user.uid)
+  );
 
-      if (response.success) {
-        currentUser = response.data;
-        setUser(response.data); // Optionally persist user data
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      if (!snapshot.empty) {
+        const docs = snapshot.docs.map((doc) => doc.data());
+        setRecommendations(docs);
       } else {
-        console.error("Failed to get current user. Skipping deletion.");
-        return;
+        setRecommendations([]);
       }
+      setLoadingRecommendation(false);
+    },
+    (error) => {
+      console.error("Error fetching active recommendations:", error);
+      setLoadingRecommendation(false);
     }
+  );
 
-    if (!currentUser?.uid) {
-      console.warn("User UID still undefined. Skipping Firestore deletion.");
+  return () => unsubscribe();
+}, [user]);
+
+  const deleteExpiredRecommendations = async () => {
+  let currentUser = user;
+
+  if (!currentUser?.uid) {
+    console.warn("User UID not available in state. Trying to refetch...");
+    const response = await getCurrentUserData();
+
+    if (response.success && response.data?.uid) {
+      currentUser = response.data;
+      setUser(response.data);
+    } else {
+      console.error("Failed to get current user or UID missing. Skipping deletion.");
+      return;
+    }
+  }
+
+  if (!currentUser?.uid) {
+    console.warn("User UID still undefined. Skipping Firestore deletion.");
+    return;
+  }
+
+  // Proceed with query and deletion
+  try {
+    const q = query(
+      collection(db, "recommendations"),
+      where("status", "==", "active"),
+      where("userId", "==", currentUser.uid)
+    );
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      console.log("No active recommendations found.");
       return;
     }
 
-    try {
-      // Query to get active recommendations for the current user
-      const q = query(
-        collection(db, "recommendations"),
-        where("status", "==", "active"),
-        where("userId", "==", currentUser.uid)
-      );
+    const now = Date.now();
 
-      const snapshot = await getDocs(q);
+    const deletePromises = snapshot.docs.map((docSnap) => {
+      const data = docSnap.data();
+      const createdAt = data.createdAt?.toDate?.();
 
-      if (snapshot.empty) {
-        console.log("No active recommendations found.");
-        return;
-      }
-
-      const now = Date.now();
-
-      // Iterate over the documents and delete those that are older than 5 minutes
-      const deletePromises = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data();
-        const createdAt = data.createdAt?.toDate?.(); // Convert Firestore Timestamp to JS Date
-
-        if (createdAt) {
-          const ageInMs = now - createdAt.getTime(); // Calculate age in milliseconds
-          if (ageInMs > 5 * 60 * 1000) {
-            // If older than 5 minutes
-            console.log(`Deleting expired recommendation: ${docSnap.id}`);
-            return deleteDoc(doc(db, "recommendations", docSnap.id)); // Delete the document
-          }
+      if (createdAt) {
+        const ageInMs = now - createdAt.getTime();
+        if (ageInMs > 5 * 60 * 1000) {
+          console.log(`Deleting expired recommendation: ${docSnap.id}`);
+          return deleteDoc(doc(db, "recommendations", docSnap.id));
         }
+      }
+      return Promise.resolve();
+    });
 
-        return Promise.resolve(); // Skip deletion if not expired
-      });
+    await Promise.all(deletePromises);
+    console.log("✅ Expired recommendations deleted.");
+  } catch (error) {
+    console.error("❌ Error deleting recommendation documents:", error);
+  }
+};
 
-      // Wait for all deletions to finish
-      await Promise.all(deletePromises);
-      console.log("✅ Expired recommendations deleted.");
-    } catch (error) {
-      console.error("❌ Error deleting recommendation documents:", error);
-    }
-  };
 
   useEffect(() => {
     // Set up a timer to run the deletion function every minute
