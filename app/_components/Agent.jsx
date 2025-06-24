@@ -21,6 +21,8 @@ import {
   getDocs,
   doc,
   deleteDoc,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 
@@ -185,34 +187,32 @@ function Agent() {
     fetchUser();
   }, []);
 
-  useEffect(() => {
-    if (!user?.uid) return; // Wait for user to be loaded
+ useEffect(() => {
+  const q = query(
+    collection(db, "recommendations"),
+    orderBy("createdAt", "desc"), // Sort by newest first
+    limit(1) // Only fetch the most recent one
+  );
 
-    const q = query(
-      collection(db, "recommendations"),
-      where("status", "==", "active"),
-      where("userId", "==", user.uid)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const docs = snapshot.docs.map((doc) => doc.data());
-          setRecommendations(docs);
-        } else {
-          setRecommendations([]);
-        }
-        setLoadingRecommendation(false);
-      },
-      (error) => {
-        console.error("Error fetching active recommendations:", error);
-        setLoadingRecommendation(false);
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      if (!snapshot.empty) {
+        const docs = snapshot.docs.map((doc) => doc.data());
+        setRecommendations(docs); // Will contain only 1 item
+      } else {
+        setRecommendations([]);
       }
-    );
+      setLoadingRecommendation(false);
+    },
+    (error) => {
+      console.error("Error fetching latest recommendation:", error);
+      setLoadingRecommendation(false);
+    }
+  );
 
-    return () => unsubscribe();
-  }, [user]); // Depend on 'user' so it refetches after user loads
+  return () => unsubscribe();
+}, []); // No dependency on 'user' now
 
   useEffect(() => {
     console.log("Fetched recommendations:", recommendations);
