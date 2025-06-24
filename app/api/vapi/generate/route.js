@@ -3,23 +3,42 @@ import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 
+// GET route
+export async function GET() {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: "Welcome to AI Restaurant Recommender!",
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+}
+
+// POST route
 export async function POST(req) {
   try {
-    // 🔒 Parse body safely
     const contentType = req.headers.get("content-type") || "";
     let body = {};
 
+    // ✅ Safely parse body
+    const rawBody = await req.text();
+    console.log("🧪 Raw Body:", rawBody);
+
     if (contentType.includes("application/json")) {
-      body = await req.json();
+      try {
+        body = JSON.parse(rawBody);
+      } catch (err) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid JSON format." }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
     } else if (contentType.includes("application/x-www-form-urlencoded")) {
-      const formData = await req.formData();
-      body = {
-        cuisine: formData.get("cuisine"),
-        budget: formData.get("budget"),
-        location: formData.get("location"),
-        userid: formData.get("userid"),
-        status: formData.get("status") || "active",
-      };
+      const params = new URLSearchParams(rawBody);
+      body = Object.fromEntries(params.entries());
     } else {
       return new Response(
         JSON.stringify({ success: false, error: "Unsupported content type." }),
@@ -29,7 +48,7 @@ export async function POST(req) {
 
     const { cuisine, budget, location, userid } = body;
 
-    // ✅ Validate required fields
+    // ✅ Input validation
     if (!cuisine || !budget || !location || !userid) {
       return new Response(
         JSON.stringify({
@@ -40,42 +59,47 @@ export async function POST(req) {
       );
     }
 
-    // 🧠 Ask Gemini to generate 3 restaurant recommendations
-    const { text: rawResponse } = await generateText({
+    // ✅ Generate restaurant recommendations
+    const { text: recommendationsText } = await generateText({
       model: google("gemini-2.0-flash-001"),
-      prompt: `Suggest 3 restaurants based on:
-- Cuisine: ${cuisine}
+      prompt: `Suggest 3 restaurants based on user preferences:
+- Preferred cuisine: ${cuisine}
 - Budget: ${budget}
 - Location: ${location}
 
-Return only this exact format (valid raw JSON, no markdown):
-
+Format as a JSON array like:
 [
   {
     "name": "Restaurant A",
-    "description": "Authentic ${cuisine} cuisine",
-    "budget": "${budget}",
-    "address": "Full address",
+    "description": "Authentic ${cuisine} food",
+    "budget": "Within ${budget}",
+    "address": "Full address here",
     "location": "Google Maps link or coordinates"
   },
   ...
-]`,
+]
+
+⚠️ DO NOT use markdown. Return only raw JSON.`,
     });
 
-    // 🧹 Clean and safely parse Gemini response
-    const jsonStart = rawResponse.indexOf("[");
-    const jsonEnd = rawResponse.lastIndexOf("]");
-    const jsonText = rawResponse.slice(jsonStart, jsonEnd + 1).trim();
+    // ✅ Parse Gemini's response safely
+    const jsonStart = recommendationsText.indexOf("[");
+    const jsonEnd = recommendationsText.lastIndexOf("]");
+    const jsonText = recommendationsText.slice(jsonStart, jsonEnd + 1).trim();
 
     let suggestions;
     try {
       suggestions = JSON.parse(jsonText);
     } catch (err) {
-      throw new Error("Failed to parse Gemini response as valid JSON.");
+      console.error("❌ Error parsing Gemini output:", err);
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid Gemini response format." }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     // ✅ Save to Firestore
-    const docData = {
+    const recommendations = {
       status: "active",
       cuisine,
       budget,
@@ -85,21 +109,17 @@ Return only this exact format (valid raw JSON, no markdown):
       createdAt: Timestamp.now(),
     };
 
-    await addDoc(collection(db, "recommendations"), docData);
+    await addDoc(collection(db, "recommendations"), recommendations);
 
-    // ✅ Respond with success and data
-    return new Response(JSON.stringify({ success: true, data: suggestions }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ success: true, data: suggestions }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("🔥 Error in POST /api/vapi/generate:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || "Unknown error" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
