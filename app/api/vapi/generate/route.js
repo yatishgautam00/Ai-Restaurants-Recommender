@@ -5,10 +5,31 @@ import { google } from "@ai-sdk/google";
 
 export async function POST(req) {
   try {
-    const body = await req.json();
+    // 🔒 Parse body safely
+    const contentType = req.headers.get("content-type") || "";
+    let body = {};
+
+    if (contentType.includes("application/json")) {
+      body = await req.json();
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
+      const formData = await req.formData();
+      body = {
+        cuisine: formData.get("cuisine"),
+        budget: formData.get("budget"),
+        location: formData.get("location"),
+        userid: formData.get("userid"),
+        status: formData.get("status") || "active",
+      };
+    } else {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unsupported content type." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const { cuisine, budget, location, userid } = body;
 
-    // ✅ Validate inputs
+    // ✅ Validate required fields
     if (!cuisine || !budget || !location || !userid) {
       return new Response(
         JSON.stringify({
@@ -19,7 +40,7 @@ export async function POST(req) {
       );
     }
 
-    // ✅ Generate recommendations using Gemini
+    // 🧠 Ask Gemini to generate 3 restaurant recommendations
     const { text: rawResponse } = await generateText({
       model: google("gemini-2.0-flash-001"),
       prompt: `Suggest 3 restaurants based on:
@@ -41,7 +62,7 @@ Return only this exact format (valid raw JSON, no markdown):
 ]`,
     });
 
-    // ✅ Sanitize and parse Gemini's response
+    // 🧹 Clean and safely parse Gemini response
     const jsonStart = rawResponse.indexOf("[");
     const jsonEnd = rawResponse.lastIndexOf("]");
     const jsonText = rawResponse.slice(jsonStart, jsonEnd + 1).trim();
@@ -49,12 +70,12 @@ Return only this exact format (valid raw JSON, no markdown):
     let suggestions;
     try {
       suggestions = JSON.parse(jsonText);
-    } catch (parseError) {
+    } catch (err) {
       throw new Error("Failed to parse Gemini response as valid JSON.");
     }
 
     // ✅ Save to Firestore
-    const recommendations = {
+    const docData = {
       status: "active",
       cuisine,
       budget,
@@ -64,14 +85,15 @@ Return only this exact format (valid raw JSON, no markdown):
       createdAt: Timestamp.now(),
     };
 
-    await addDoc(collection(db, "recommendations"), recommendations);
+    await addDoc(collection(db, "recommendations"), docData);
 
+    // ✅ Respond with success and data
     return new Response(JSON.stringify({ success: true, data: suggestions }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("🔥 Error generating or saving recommendations:", error);
+    console.error("🔥 Error in POST /api/vapi/generate:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || "Unknown error" }),
       {
