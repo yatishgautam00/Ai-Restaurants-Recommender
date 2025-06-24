@@ -21,10 +21,10 @@ export async function GET() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { cuisine, budget, location } = body;
+    const { cuisine, budget, location, userid } = body;
 
     // Validate inputs
-    if (!cuisine || !budget || !location ) {
+    if (!cuisine || !budget || !location || !userid) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -69,7 +69,7 @@ Format as a JSON array like:
       cuisine,
       budget,
       location,
-      // userId: userid, // variable, but stored as field "userId"
+      userId: userid, // variable, but stored as field "userId"
       suggestions,
       createdAt: Timestamp.now(), // proper Firestore timestamp
     };
