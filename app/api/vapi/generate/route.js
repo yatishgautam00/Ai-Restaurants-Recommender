@@ -2,8 +2,7 @@ import { db } from "@/Firebase/Firebase";
 import { collection, addDoc, Timestamp } from "firebase/firestore"; // ✅ Import required Firestore methods
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/Firebase/Firebase"; // Ensure this is imported
+
 // GET route
 export async function GET() {
   return new Response(
@@ -17,27 +16,15 @@ export async function GET() {
     }
   );
 }
-function getCurrentUserUID() {
-  return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe(); // cleanup listener
-      if (user) {
-        resolve(user.uid);
-      } else {
-        reject(new Error("User not authenticated."));
-      }
-    });
-  });
-}
 
 // POST route to handle recommendations
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { cuisine, budget, location } = body;
+    const { cuisine, budget, location, userid } = body;
 
     // Validate inputs
-    if (!cuisine || !budget || !location) {
+    if (!cuisine || !budget || !location || !userid) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -50,7 +37,6 @@ export async function POST(req) {
         }
       );
     }
-    const userId = await getCurrentUserUID();
 
     // Generate recommendations from Gemini
     const { text: recommendationsText } = await generateText({
@@ -83,7 +69,7 @@ Format as a JSON array like:
       cuisine,
       budget,
       location,
-      userId: userId, // variable, but stored as field "userId"
+      userId: userid, // variable, but stored as field "userId"
       suggestions,
       createdAt: Timestamp.now(), // proper Firestore timestamp
     };

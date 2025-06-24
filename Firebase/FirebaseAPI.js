@@ -44,24 +44,37 @@ export const loginUser = async (email, password) => {
   }
 };
 
-export const getCurrentUserData = async () => {
-  return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      unsubscribe(); // stop listening after first trigger
+  export const getCurrentUserData = async () => {
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        unsubscribe(); // stop listening after first trigger
 
-      if (!user) {
-        return resolve({ success: false, error: "No user is currently logged in." });
-      }
-
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          resolve({ success: true, data: userDoc.data() });
-        } else {
-          resolve({ success: false, error: "User data not found in Firestore." });
+        if (!user) {
+          return resolve({ success: false, error: "No user is currently logged in." });
         }
-      } catch (error) {
-        resolve({ success: false, error: error.message });
+
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            resolve({ success: true, data: userDoc.data() });
+          } else {
+            resolve({ success: false, error: "User data not found in Firestore." });
+          }
+        } catch (error) {
+          resolve({ success: false, error: error.message });
+        }
+      });
+    });
+  };
+export const getCurrentUserUID = async () => {
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+
+      if (user) {
+        resolve({ success: true, uid: user.uid });
+      } else {
+        resolve({ success: false, error: "No user is currently logged in." });
       }
     });
   });
