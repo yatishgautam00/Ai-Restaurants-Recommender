@@ -102,49 +102,19 @@ function Agent() {
       setLastMessage(messages[messages.length - 1].content);
     }
   }, [messages]);
-  useEffect(() => {
-    if (!user?.uid) return; // Wait until user is loaded
-
-    const q = query(
-      collection(db, "recommendations"),
-      where("status", "==", "active"),
-      where("userId", "==", user.uid)
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const docs = snapshot.docs.map((doc) => doc.data());
-          setRecommendations(docs);
-        } else {
-          setRecommendations([]);
-        }
-        setLoadingRecommendation(false);
-      },
-      (error) => {
-        console.error("Error fetching active recommendations:", error);
-        setLoadingRecommendation(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user]);
-
   const deleteExpiredRecommendations = async () => {
     let currentUser = user;
 
+    // ⏳ Try to fetch current user if not in state
     if (!currentUser?.uid) {
       console.warn("User UID not available in state. Trying to refetch...");
-      const response = await getCurrentUserData();
+      const response = await getCurrentUserData(); // Assuming this function exists
 
-      if (response.success && response.data?.uid) {
+      if (response.success) {
         currentUser = response.data;
-        setUser(response.data);
+        setUser(response.data); // Optionally persist user data
       } else {
-        console.error(
-          "Failed to get current user or UID missing. Skipping deletion."
-        );
+        console.error("Failed to get current user. Skipping deletion.");
         return;
       }
     }
@@ -154,8 +124,8 @@ function Agent() {
       return;
     }
 
-    // Proceed with query and deletion
     try {
+      // Query to get active recommendations for the current user
       const q = query(
         collection(db, "recommendations"),
         where("status", "==", "active"),
@@ -163,6 +133,7 @@ function Agent() {
       );
 
       const snapshot = await getDocs(q);
+
       if (snapshot.empty) {
         console.log("No active recommendations found.");
         return;
@@ -170,20 +141,24 @@ function Agent() {
 
       const now = Date.now();
 
+      // Iterate over the documents and delete those that are older than 5 minutes
       const deletePromises = snapshot.docs.map((docSnap) => {
         const data = docSnap.data();
-        const createdAt = data.createdAt?.toDate?.();
+        const createdAt = data.createdAt?.toDate?.(); // Convert Firestore Timestamp to JS Date
 
         if (createdAt) {
-          const ageInMs = now - createdAt.getTime();
+          const ageInMs = now - createdAt.getTime(); // Calculate age in milliseconds
           if (ageInMs > 5 * 60 * 1000) {
+            // If older than 5 minutes
             console.log(`Deleting expired recommendation: ${docSnap.id}`);
-            return deleteDoc(doc(db, "recommendations", docSnap.id));
+            return deleteDoc(doc(db, "recommendations", docSnap.id)); // Delete the document
           }
         }
-        return Promise.resolve();
+
+        return Promise.resolve(); // Skip deletion if not expired
       });
 
+      // Wait for all deletions to finish
       await Promise.all(deletePromises);
       console.log("✅ Expired recommendations deleted.");
     } catch (error) {
@@ -246,11 +221,12 @@ function Agent() {
   const handleCall = async () => {
     setCallStatus(CallStatus.CONNECTING);
     const { uid, email } = user;
-    console.log(user.uid);
-    console.log(user.email);
+
     await vapi.start(process.env.NEXT_PUBLIC_VAPI_WORKFLOW_ID, {
-      "variableValues": {
-        userid: user.uid
+      variableValues: {
+        userid: user.uid,
+        useremail: user.email,
+        status: "active",
       },
     });
   };
@@ -352,69 +328,71 @@ function Agent() {
                 </p>
               )}
               <div ref={messagesEndRef} />
-              {/* Recommendations fixed at bottom (scrolls if long) */}
-              {recommendations.length > 0 && !loadingRecommendation && (
-                <div className="recommendations-container overflow-y-auto p-4 bg-gray-400 border-t border-gray-800">
-                  <p className="text-sm text-gray-400 mb-1">
-                    Recommended restaurants:
-                  </p>
-                  <div className="flex flex-wrap gap-3 justify-between">
-                    {recommendations.map((doc, docIndex) =>
-                      doc.suggestions?.map((rec, i) => (
-                        <div
-                          key={`${docIndex}-${i}`}
-                          className="bg-gray-300  text-sm  p-4 rounded-lg border border-gray-700 shadow-md w-full max-w-xs"
-                        >
-                          {/* Restaurant Name */}
-                          <p className="text-lg font-semibold mb-2">
-                            Name: {rec.name}
-                          </p>
+            {/* Recommendations fixed at bottom (scrolls if long) */}
+          {recommendations.length > 0 && !loadingRecommendation && (
+            <div className="recommendations-container overflow-y-auto p-4 bg-gray-400 border-t border-gray-800">
+              <p className="text-sm text-gray-400 mb-1">
+                Recommended restaurants:
+              </p>
+              <div className="flex flex-wrap gap-3 justify-between">
+                {recommendations.map((doc, docIndex) =>
+                  doc.suggestions?.map((rec, i) => (
+                    <div
+                      key={`${docIndex}-${i}`}
+                      className="bg-gray-300  text-sm  p-4 rounded-lg border border-gray-700 shadow-md w-full max-w-xs"
+                    >
+                      {/* Restaurant Name */}
+                      <p className="text-lg font-semibold mb-2">
+                        Name: {rec.name}
+                      </p>
 
-                          {/* <hr className="border-gray-600 mb-2" /> */}
+                      {/* <hr className="border-gray-600 mb-2" /> */}
 
-                          {/* Description */}
-                          {/* <p className="text-gray-300 mb-2">{rec.description}</p> */}
+                      {/* Description */}
+                      {/* <p className="text-gray-300 mb-2">{rec.description}</p> */}
 
-                          <hr className="border-gray-600 mb-2" />
+                      <hr className="border-gray-600 mb-2" />
 
-                          {/* Budget */}
-                          <p className=" text-lg mb-1">
-                            <span className="font-medium">Budget:</span>{" "}
-                            {rec.budget}
-                          </p>
-                          <hr className="border-gray-600 mb-2" />
+                      {/* Budget */}
+                      <p className=" text-lg mb-1">
+                        <span className="font-medium">Budget:</span>{" "}
+                        {rec.budget}
+                      </p>
+                      <hr className="border-gray-600 mb-2" />
 
-                          {/* Address */}
-                          <p className=" text-lg mb-1">
-                            <span className="font-medium">Address:</span>{" "}
-                            {rec.address}
-                          </p>
-                          <hr className="border-gray-600 mb-2" />
+                      {/* Address */}
+                      <p className=" text-lg mb-1">
+                        <span className="font-medium">Address:</span>{" "}
+                        {rec.address}
+                      </p>
+                      <hr className="border-gray-600 mb-2" />
 
-                          {/* Location */}
-                          <p className=" text-lg mb-3">
-                            {/* <span className="font-medium">Location:</span> {rec.location} */}
-                          </p>
+                      {/* Location */}
+                      <p className=" text-lg mb-3">
+                        {/* <span className="font-medium">Location:</span> {rec.location} */}
+                      </p>
 
-                          {/* Google Maps link box */}
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                              `${rec.address}, ${rec.location}`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block mt-auto text-center bg-blue-700 hover:bg-blue-800 transition-colors text-white text-xs py-2 px-3 rounded-md"
-                          >
-                            View on Google Maps 🗺️
-                          </a>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
+                      {/* Google Maps link box */}
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          `${rec.address}, ${rec.location}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-auto text-center bg-blue-700 hover:bg-blue-800 transition-colors text-white text-xs py-2 px-3 rounded-md"
+                      >
+                        View on Google Maps 🗺️
+                      </a>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
             </div>
           </div>
+
+          
         </div>
       </div>
     </div>
