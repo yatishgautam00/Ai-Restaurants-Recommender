@@ -1,7 +1,17 @@
 import { db } from "@/Firebase/Firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore"; // ✅ Import required Firestore methods
+import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
+import admin from "firebase-admin";
+
+// Initialize Firebase Admin SDK if not already
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    ),
+  });
+}
 
 // GET route
 export async function GET() {
@@ -17,19 +27,33 @@ export async function GET() {
   );
 }
 
-// POST route to handle recommendations
+// POST route
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const { cuisine, budget, location, userid } = body;
+    // 1. Get ID token from Authorization header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized: Missing token" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    // Validate inputs
-    if (!cuisine || !budget || !location || !userid) {
+    const idToken = authHeader.split("Bearer ")[1];
+
+    // 2. Verify token
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const userid = decodedToken.uid;
+
+    // 3. Parse user preferences
+    const body = await req.json();
+    const { cuisine, budget, location } = body;
+
+    if (!cuisine || !budget || !location) {
       return new Response(
         JSON.stringify({
           success: false,
-          error:
-            "Missing one or more required fields: cuisine, budget, location, userid.",
+          error: "Missing one or more required fields: cuisine, budget, location.",
         }),
         {
           status: 400,
@@ -38,7 +62,7 @@ export async function POST(req) {
       );
     }
 
-    // Generate recommendations from Gemini
+    // 4. Generate restaurant recommendations
     const { text: recommendationsText } = await generateText({
       model: google("gemini-2.0-flash-001"),
       prompt: `Suggest 3 restaurants based on user preferences:
@@ -63,16 +87,17 @@ Format as a JSON array like:
 
     const suggestions = JSON.parse(recommendationsText);
 
-    // Save to Firestore using modular SDK
+    // 5. Save to Firestore
     const recommendations = {
       status: "active",
       cuisine,
       budget,
       location,
-      userId: userid, // variable, but stored as field "userId"
+      userId: userid,
       suggestions,
-      createdAt: Timestamp.now(), // proper Firestore timestamp
+      createdAt: Timestamp.now(),
     };
+
     await addDoc(collection(db, "recommendations"), recommendations);
 
     return new Response(JSON.stringify({ success: true, data: suggestions }), {

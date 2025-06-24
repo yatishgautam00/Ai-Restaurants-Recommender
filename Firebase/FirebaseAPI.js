@@ -5,7 +5,14 @@ import {
 } from "firebase/auth";
 import { auth, db } from "./Firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { collection, query, where, getDocs,orderBy, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  Timestamp,
+} from "firebase/firestore";
 
 // Create New User and Store in Firestore
 export const registerUser = async (email, password) => {
@@ -44,39 +51,43 @@ export const loginUser = async (email, password) => {
   }
 };
 
-  export const getCurrentUserData = async () => {
-    return new Promise((resolve) => {
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        unsubscribe(); // stop listening after first trigger
-
-        if (!user) {
-          return resolve({ success: false, error: "No user is currently logged in." });
-        }
-
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            resolve({ success: true, data: userDoc.data() });
-          } else {
-            resolve({ success: false, error: "User data not found in Firestore." });
-          }
-        } catch (error) {
-          resolve({ success: false, error: error.message });
-        }
-      });
-    });
-  };
-export const getCurrentUserUID = async () => {
+export const getCurrentUserData = async () => {
   return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      unsubscribe(); // stop listening after first trigger
 
-      if (user) {
-        resolve({ success: true, uid: user.uid });
-      } else {
-        resolve({ success: false, error: "No user is currently logged in." });
+      if (!user) {
+        return resolve({
+          success: false,
+          error: "No user is currently logged in.",
+        });
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          resolve({ success: true, data: userDoc.data() });
+        } else {
+          resolve({
+            success: false,
+            error: "User data not found in Firestore.",
+          });
+        }
+      } catch (error) {
+        resolve({ success: false, error: error.message });
       }
     });
+  });
+};
+export const getCurrentUserUID = async () => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    unsubscribe();
+
+    if (user) {
+      return user.uid;
+    } else {
+      return false;
+    }
   });
 };
 
@@ -86,7 +97,10 @@ export const getUserRecommendations = async () => {
       unsubscribe(); // Ensure it runs only once
 
       if (!user) {
-        return resolve({ success: false, error: "No user is currently logged in." });
+        return resolve({
+          success: false,
+          error: "No user is currently logged in.",
+        });
       }
 
       try {
@@ -100,7 +114,10 @@ export const getUserRecommendations = async () => {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          return resolve({ success: false, error: "No active recommendations found." });
+          return resolve({
+            success: false,
+            error: "No active recommendations found.",
+          });
         }
 
         // Assuming there's only one document with userId and state as active
@@ -113,9 +130,10 @@ export const getUserRecommendations = async () => {
         const recommendation = {
           id: recommendationDoc.id,
           ...data,
-          createdAt: data.createdAt instanceof Timestamp
-            ? data.createdAt.toDate() // Convert Firestore Timestamp to JS Date
-            : new Date(data.createdAt), // Handle if it's already a Date or ISO string
+          createdAt:
+            data.createdAt instanceof Timestamp
+              ? data.createdAt.toDate() // Convert Firestore Timestamp to JS Date
+              : new Date(data.createdAt), // Handle if it's already a Date or ISO string
         };
 
         resolve({ success: true, data: recommendation });
