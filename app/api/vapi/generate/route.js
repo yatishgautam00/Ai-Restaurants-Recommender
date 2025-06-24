@@ -1,10 +1,9 @@
 import { db } from "@/Firebase/Firebase";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { collection, addDoc, Timestamp } from "firebase/firestore"; // ✅ Import required Firestore methods
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/Firebase/Firebase"; // Ensure this is imported
-
 // GET route
 export async function GET() {
   return new Response(
@@ -18,8 +17,6 @@ export async function GET() {
     }
   );
 }
-
-// Helper to get user UID
 function getCurrentUserUID() {
   return new Promise((resolve, reject) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -44,7 +41,8 @@ export async function POST(req) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Missing one or more required fields: cuisine, budget, location.",
+          error:
+            "Missing one or more required fields: cuisine, budget, location, userid.",
         }),
         {
           status: 400,
@@ -52,8 +50,6 @@ export async function POST(req) {
         }
       );
     }
-
-    // 🔐 Get authenticated user's UID
     const userId = await getCurrentUserUID();
 
     // Generate recommendations from Gemini
@@ -81,17 +77,16 @@ Format as a JSON array like:
 
     const suggestions = JSON.parse(recommendationsText);
 
-    // Save to Firestore
+    // Save to Firestore using modular SDK
     const recommendations = {
       status: "active",
       cuisine,
       budget,
       location,
-      userId,
+      userId: userId, // variable, but stored as field "userId"
       suggestions,
-      createdAt: Timestamp.now(),
+      createdAt: Timestamp.now(), // proper Firestore timestamp
     };
-
     await addDoc(collection(db, "recommendations"), recommendations);
 
     return new Response(JSON.stringify({ success: true, data: suggestions }), {
