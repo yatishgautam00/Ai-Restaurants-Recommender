@@ -46,6 +46,7 @@ export async function POST(req) {
 - Budget: ${budget}
 - Location: ${location}
 
+
 Format as a JSON array like:
 [
   {
